@@ -67,7 +67,6 @@ public:
             char buffer[10];
             snprintf(buffer, 10, "%lu", body_size);
             set_header("Content-Length", string(buffer));
-            printf("header Content-Length: %s\n", buffer);
         }
 
         size = 0;

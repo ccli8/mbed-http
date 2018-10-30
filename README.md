@@ -1,6 +1,6 @@
 # HTTP and HTTPS library for mbed OS 5
 
-This library is used to make HTTP and HTTPS calls from mbed OS 5 applications.
+This library is used to make HTTP and HTTPS calls from Mbed OS 5 applications.
 
 ## HTTP Request API
 
@@ -23,7 +23,7 @@ delete request; // also clears out the response
 ## HTTPS Request API
 
 ```cpp
-// pass in the root certificates that you trust, there is no central CA registry in mbed OS
+// pass in the root certificates that you trust, there is no central CA registry in Mbed OS
 const char SSL_CA_PEM[] = "-----BEGIN CERTIFICATE-----\n"
     /* rest of the CA root certificates */;
 
@@ -43,23 +43,33 @@ delete request;
 
 **Note:** You can get the root CA for a domain easily from Firefox. Click on the green padlock, click *More information > Security > View certificate > Details*. Select the top entry in the 'Certificate Hierarchy' and click *Export...*. This gives you a PEM file. Add the content of the PEM file to your root CA list ([here's an image](img/root-ca-selection.png)).
 
+### Mbed TLS Entropy configuration
+
+If your target does not have a built-in TRNG, or other entropy sources, add the following macros to your `mbed_app.json` file to disable entropy:
+
+```json
+{
+    "macros": [
+        "MBEDTLS_TEST_NULL_ENTROPY",
+        "MBEDTLS_NO_DEFAULT_ENTROPY_SOURCES"
+    ]
+}
+```
+
+Note that this is **not** secure, and you should not deploy this device into production with this configuration.
+
 ## Memory usage
 
 Small requests where the body of the response is cached by the library (like the one found in main-http.cpp), require ~4K of RAM. When the request is finished they require ~1.5K of RAM, depending on the size of the response. This applies both to HTTP and HTTPS. If you need to handle requests that return a large response body, see 'Dealing with large body'.
 
-HTTPS requires additional memory. On FRDM-K64F:
-
-* TLS handshake requires 53K of heap space.
-* Keeping TLS socket open requires 43K of heap space.
-
-This means that you cannot use HTTPS on devices with less than 128K of memory, as you also need to reserve memory for the stack and network interface.
+HTTPS requires additional memory: on FRDM-K64F about 50K of heap space (at its peak). This means that you cannot use HTTPS on devices with less than 128K of memory, as you also need to reserve memory for the stack and network interface.
 
 ### Dealing with large response body
 
 By default the library will store the full request body on the heap. This works well for small responses, but you'll run out of memory when receiving a large response body. To mitigate this you can pass in a callback as the last argument to the request constructor. This callback will be called whenever a chunk of the body is received. You can set the request chunk size in the `HTTP_RECEIVE_BUFFER_SIZE` macro (see `mbed_lib.json` for the definition) although it also depends on the buffer size of the underlying network connection.
 
 ```cpp
-void body_callback(const char* data, size_t data_len) {
+void body_callback(const char* data, uint32_t data_len) {
     // do something with the data
 }
 
@@ -72,7 +82,7 @@ req->send(NULL, 0);
 If you cannot load the full request into memory, you can pass a callback into the `send` function. Through this callback you can feed in chunks of the request body. This is very useful if you want to send files from a file system.
 
 ```cpp
-const void * get_chunk(size_t* out_size) {
+const void * get_chunk(uint32_t* out_size) {
     // set the value of out_size (via *out_size = 10) to the size of the buffer
     // return the buffer
 
@@ -106,10 +116,12 @@ HttpRequest* req = new HttpRequest(socket, HTTP_GET, "http://httpbin.org/status/
 
 ```cpp
 TLSSocket* socket = new TLSSocket();
+
+nsapi_error_t r;
 // make sure to check the return values for the calls below (should return NSAPI_ERROR_OK)
-socket->open(network);
-socket->set_root_ca_cert(SSL_CA_PEM);
-socket->connect("httpbin.org", 443);
+r = socket->open(network);
+r = socket->set_root_ca_cert(SSL_CA_PEM);
+r = socket->connect("httpbin.org", 443);
 
 // Pass in `socket`, instead of `network` as first argument, and omit the `SSL_CA_PEM` argument
 HttpsRequest* get_req = new HttpsRequest(socket, HTTP_GET, "https://httpbin.org/status/418");
@@ -137,6 +149,6 @@ printf("\n");
 * NUCLEO_F411RE with ESP8266.
 * ODIN-W2 with WiFi.
 * K64F with Atmel 6LoWPAN shield.
-* Mbed Simulator.
+* [Mbed Simulator](https://github.com/janjongboom/mbed-simulator).
 
 But this should work with any Mbed OS 5 device that implements the `NetworkInterface` API.

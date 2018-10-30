@@ -42,7 +42,7 @@ public:
             free(body);
         }
 
-        for (size_t ix = 0; ix < header_fields.size(); ix++) {
+        for (uint32_t ix = 0; ix < header_fields.size(); ix++) {
             delete header_fields[ix];
             delete header_values[ix];
         }
@@ -106,9 +106,9 @@ public:
     }
 
     void set_headers_complete() {
-        for (size_t ix = 0; ix < header_fields.size(); ix++) {
+        for (uint32_t ix = 0; ix < header_fields.size(); ix++) {
             if (strcicmp(header_fields[ix]->c_str(), "content-length") == 0) {
-                expected_content_length = (size_t)atoi(header_values[ix]->c_str());
+                expected_content_length = (uint32_t)atoi(header_values[ix]->c_str());
                 break;
             }
         }
@@ -145,7 +145,6 @@ public:
                 char* original_body = body;
                 body = (char*)realloc(body, body_offset + length);
                 if (body == NULL) {
-                    printf("[HttpResponse] realloc for %d bytes failed\n", body_offset + length);
                     free(original_body);
                     return;
                 }
