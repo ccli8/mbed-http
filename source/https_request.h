@@ -60,6 +60,10 @@ public:
         ((TLSSocket*)_socket)->open(network);
         ((TLSSocket*)_socket)->set_root_ca_cert(ssl_ca_pem);
         _we_created_socket = true;
+
+#if (MBED_MAJOR_VERSION >= 6)
+        _network = network;
+#endif
     }
 
     /**
@@ -85,14 +89,36 @@ public:
         _response = NULL;
 
         _we_created_socket = false;
+
+#if (MBED_MAJOR_VERSION >= 6)
+        _network = NULL;
+#endif
     }
 
     virtual ~HttpsRequest() {}
 
 protected:
     virtual nsapi_error_t connect_socket(char *host, uint16_t port) {
+#if (MBED_MAJOR_VERSION < 6)
         return ((TLSSocket*)_socket)->connect(host, port);
+#else
+        if (!_network) {
+            return NSAPI_ERROR_DNS_FAILURE;
+        }
+
+        SocketAddress sockaddr;
+        int rc = _network->gethostbyname(host, &sockaddr);
+        if (rc != NSAPI_ERROR_OK) {
+            return rc;
+        }
+        sockaddr.set_port(port);
+        return ((TLSSocket*)_socket)->connect(sockaddr);
+#endif
     }
+
+#if (MBED_MAJOR_VERSION >= 6)
+    NetworkInterface* _network;
+#endif
 };
 
 #endif // _MBED_HTTPS_REQUEST_H_
