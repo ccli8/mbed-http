@@ -232,6 +232,14 @@ public:
         return _request_buffer_ix;
     }
 
+    /**
+     * Cancel the HTTP request/response transfer.
+     */
+    void cancel() {
+        if (_socket) {
+            _socket->close();
+        }
+    }
 protected:
     virtual nsapi_error_t connect_socket(char *host, uint16_t port) = 0;
 
